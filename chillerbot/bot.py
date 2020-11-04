@@ -1,9 +1,9 @@
 """Модуль для реализации бота."""
 
-from aiohttp import web
 from abc import ABC, abstractmethod
 
 import vkbottle
+from aiohttp import web
 
 from chillerbot.handlers import Handler, HandlerMock
 
