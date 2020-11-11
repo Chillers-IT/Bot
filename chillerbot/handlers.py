@@ -6,13 +6,12 @@ from abc import ABC, abstractmethod
 from sklearn import metrics
 
 import chillerbot.intent as intent
+import chillerbot.constants as constants
 
 
 class Handler(ABC):
     def __init__(self):
         self._handler = None
-        self._classifierIntent = intent.ClassifierIntent()
-        self._threshold = float(os.environ.get("THRESHOLD"))
 
     async def __call__(self, message: str):
         return await self.handle(message)
@@ -30,8 +29,13 @@ class Handler(ABC):
 
 
 class HandlerFaq(Handler):
+    def __init__(self):
+        super().__init__()
+        self._classifierIntent = intent.ClassifierIntent()
+        self._threshold = constants.THRESHOLD
+
     async def handle(self, message: str):
-        question = intent.clean_text(message)
+        question = intent.Lemmatizer().transform(message)
 
         tf = self._classifierIntent.vectorizer.transform([question]).toarray()
         cos = 1 - metrics.pairwise_distances(self._classifierIntent.df_X, tf,
