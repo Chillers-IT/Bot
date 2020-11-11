@@ -35,15 +35,15 @@ class HandlerFaq(Handler):
         self._threshold = constants.THRESHOLD
 
     async def handle(self, message: str):
-        question = intent.Lemmatizer().transform(message)
+        question = self._classifierIntent.transform_pipeline1\
+                       .transform([message]).toarray()
 
-        tf = self._classifierIntent.vectorizer.transform([question]).toarray()
-        cos = 1 - metrics.pairwise_distances(self._classifierIntent.df_X, tf,
+        cos = 1 - metrics.pairwise_distances(self._classifierIntent.df_X,
+                                             question,
                                              metric='cosine')
         if cos.max() > self._threshold:
             index_value = cos.argmax()
-            print(self._classifierIntent.df_X.head())
-            return self._classifierIntent.FAQ['answers'].loc[cos.argmax()]
+            return self._classifierIntent.answers.loc[cos.argmax()]
         else:
             return await super().handle(message)
 
