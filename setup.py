@@ -1,19 +1,17 @@
 from setuptools import setup
-from setuptools.command import install, develop
+from setuptools.command.install import install
+import atexit
 
 
-class PostInstallCommand(install):
-    def run(self):
-        import nltk
-        install.run(self)
-        nltk.download('stopwords')
+def _post_install():
+    import nltk
+    nltk.download('stopwords')
 
 
-class PostDevelopCommand(develop):
-    def run(self):
-        import nltk
-        develop.run(self)
-        nltk.download('stopwords')
+class Install(install):
+    def __init__(self, *args, **kwargs):
+        super(Install, self).__init__(*args, **kwargs)
+        atexit.register(_post_install)
 
 
 setup(name='chillerbot',
@@ -21,7 +19,6 @@ setup(name='chillerbot',
       packages=['chillerbot'],
       install_requires=['vkbottle', 'aiohttp', 'nltk', 'scikit-learn',
                         'pandas', 'pymorphy2'],
-      cmd_class={
-            'develop': PostDevelopCommand,
-            'install': PostInstallCommand
+      entry_points={
+          'console_scripts': ['chillerbot=chillerbot.__main__:main'],
       })
