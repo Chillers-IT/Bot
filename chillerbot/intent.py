@@ -1,26 +1,29 @@
 """Модуль для определения контекста общения с пользователем."""
-import os
+
+from typing import Optional, Union
 import re
 
-import pandas as pd
 import pymorphy2
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin, ClassifierMixin
+from sklearn.exceptions import NotFittedError
 from sklearn.pipeline import Pipeline
+from scipy.spatial import KDTree
+import numpy as np
 
 
 class Lemmatizer(BaseEstimator, TransformerMixin):
     def __init__(self):
-        self.morph = pymorphy2.MorphAnalyzer()
+        self.morph: pymorphy2.MorphAnalyzer = pymorphy2.MorphAnalyzer()
 
-    def fit(self, X):
+    def fit(self, X, y):
         return self
 
     def transform(self, X):
-        return [self._clean_text(x) for x in X]
+        return np.array([self._clean_text(x) for x in X])
 
-    def _clean_text(self, text, stop_word=stopwords.words('russian')):
+    def _clean_text(self, text: str, stop_word: list=stopwords.words('russian')):
         """
         Обработка теста для последующей векторизации.
 
@@ -48,26 +51,32 @@ class Lemmatizer(BaseEstimator, TransformerMixin):
         return re.sub(r'[^a-z0-9а-я\s]', '', x)
 
 
-class ClassifierIntent:
+class ClassifierIntent(BaseEstimator, ClassifierMixin):
     def __init__(self):
-        try:
-            path = os.environ['PATH_DATASET']
-            FAQ = pd.read_csv(path)
-        except KeyError:
-            raise EnvironmentError("PATH_DATASET: path to dataset is not specified")
-        except FileNotFoundError:
-            raise FileNotFoundError("Dataset not found: {}".format(path))
+        super().__init__()
+        self._tree: Optional[KDTree] = None
+        self._y: Union[list, np.ndarray, None] = None
 
-        vectorizer = TfidfVectorizer()
-        self.transform_pipeline1 = Pipeline([
-                ('clean text', Lemmatizer()),
-                ('tf-idf', vectorizer),
-            ])
+    def fit(self, X, y=None):
+        # TODO: Может не совпасть тип.
+        X = X.toarray()
 
-        vectorized_questions = self.transform_pipeline1\
-            .fit(FAQ['questions']).transform(FAQ['questions'])
+        self._tree = KDTree(X)
+        self._y = y
+        return self
 
-        self.df_X = pd.DataFrame(vectorized_questions.toarray(),
-                                 columns=vectorizer.get_feature_names())
+    def predict(self, X):
+        if self._tree is None:
+            raise NotFittedError()
 
-        self.answers = FAQ['answers']
+        # TODO: Может не совпасть тип.
+        X = X.toarray()
+
+        proba, index = self._tree.query(X)
+        return proba[0], self._y[index[0]]
+
+
+def buildModel():
+    return Pipeline([('t1', Lemmatizer()),
+                     ('t2', TfidfVectorizer()),
+                     ('cls', ClassifierIntent())])
