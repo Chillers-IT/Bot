@@ -3,10 +3,24 @@ Multifunctional bot
 
 
 ## Запуск
+
+### Через пакет
 ```
-python3 -m chillerbot
+python3 -m chillerbot http
 ```
-P.S. Подключение происходит по http.
+или
+```
+python3 -m chillerbot vk
+```
+
+### Через скрипт
+```
+chillerbot http
+```
+или
+```
+chillerbot vk
+```
 
 ## Подключение
 Запустить скрипт client.py из папки scripts:
