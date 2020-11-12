@@ -1,11 +1,18 @@
 import os
+import argparse
+import inspect
+from configparser import ConfigParser
 
 from pandas import read_csv
 
 from chillerbot.handlers import HandlerFaq, HandlerMock
 from chillerbot.bot import BotHttp, BotVk
 from chillerbot.intent import buildModel
-from chillerbot.constants import THRESHOLD
+from chillerbot.constants import THRESHOLD, CONFIG_FILE, DEFAULT_CONFIG
+
+
+class ConfigError(Exception):
+    pass
 
 
 def getDataset():
@@ -19,16 +26,83 @@ def getDataset():
     return faq
 
 
-if __name__ == '__main__':
+def fitModel():
     df = getDataset()
     model = buildModel()
     model.fit(df['questions'].to_numpy(), df['answers'].to_numpy())
+    return model
 
+
+def createHandler(model):
     handler = HandlerFaq(model, lambda proba: 1 - proba > THRESHOLD)
     handler.set_next(HandlerMock())
-    # bot = BotVk('48d58aaf62f57f5a6738b1b81b7663694369c27b7d2eb4d90db67b3b1fd547781aa3db065a7f2ab380a68',
-    #             handler)
-    # bot.run()
-    bot = BotHttp()
-    bot.setHandler(handler)
-    bot.run()
+    return handler
+
+
+def loadConfig():
+    config = ConfigParser()
+
+    home = os.path.expanduser('~')
+    path = os.path.join(home, CONFIG_FILE)
+
+    if os.path.exists(path):
+        config.read(path)
+    else:
+        for k in DEFAULT_CONFIG.keys():
+            config[k] = DEFAULT_CONFIG[k]
+        with open(path, 'w') as file:
+            config.write(file)
+
+    return config
+
+
+class Actions:
+    @classmethod
+    def getActions(cls):
+        return dict(inspect.getmembers(cls, inspect.isfunction))
+
+    @staticmethod
+    def vk():
+        model = fitModel()
+        handler = createHandler(model)
+
+        config = loadConfig()
+
+        try:
+            token = config['vk']['token']
+        except KeyError:
+            raise ConfigError("Doesn't found vk token")
+
+        bot = BotVk(token)
+        bot.setHandler(handler)
+        bot.run()
+
+    @staticmethod
+    def http():
+        model = fitModel()
+        handler = createHandler(model)
+
+        config = loadConfig()
+
+        bot = BotHttp()
+        bot.setHandler(handler)
+        bot.run()
+
+
+def createParser(actions):
+    p = argparse.ArgumentParser()
+    p.add_argument('command', choices=Actions.getActions().keys())
+    return p
+
+
+def main():
+    choices = Actions.getActions()
+
+    parser = createParser(choices.keys())
+    namespace = parser.parse_args()
+
+    choices[namespace.command]()
+
+
+if __name__ == '__main__':
+    main()
