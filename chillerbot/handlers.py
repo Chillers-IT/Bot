@@ -1,12 +1,9 @@
 """Модуль для реализации обработки событий в заданном контексте бота."""
 
-import os
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 
-from sklearn import metrics
-
-import chillerbot.intent as intent
-import chillerbot.constants as constants
+from sklearn.pipeline import Pipeline
 
 
 class Handler(ABC):
@@ -29,21 +26,17 @@ class Handler(ABC):
 
 
 class HandlerFaq(Handler):
-    def __init__(self):
+    def __init__(self, classifier: Pipeline,
+                 predicate: Callable = lambda x: True):
         super().__init__()
-        self._classifierIntent = intent.ClassifierIntent()
-        self._threshold = constants.THRESHOLD
+        self._model = classifier
+        self._predicate = predicate
 
     async def handle(self, message: str):
-        question = self._classifierIntent.transform_pipeline1\
-                       .transform([message]).toarray()
+        proba, reply = self._model.predict([message])
 
-        cos = 1 - metrics.pairwise_distances(self._classifierIntent.df_X,
-                                             question,
-                                             metric='cosine')
-        if cos.max() > self._threshold:
-            index_value = cos.argmax()
-            return self._classifierIntent.answers.loc[cos.argmax()]
+        if self._predicate(proba):
+            return reply
         else:
             return await super().handle(message)
 
