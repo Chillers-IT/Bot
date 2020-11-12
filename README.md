@@ -16,4 +16,3 @@ python3 client.py
 
 ## Переменные окружения
 - PATH_DATASET - путь до датасета
-- THRESHOLD - точность
