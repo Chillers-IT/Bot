@@ -5,6 +5,8 @@ from collections.abc import Callable
 
 from sklearn.pipeline import Pipeline
 
+from chillerbot.constants import THRESHOLD
+
 
 class Handler(ABC):
     def __init__(self):
@@ -44,3 +46,9 @@ class HandlerFaq(Handler):
 class HandlerMock(Handler):
     async def handle(self, message: str):
         return 'Не знаю, что ответить.'
+
+
+def createHandler(model):
+    handler = HandlerFaq(model, lambda proba: 1 - proba > THRESHOLD)
+    handler.set_next(HandlerMock())
+    return handler

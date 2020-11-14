@@ -80,3 +80,4 @@ def buildModel():
     return Pipeline([('t1', Lemmatizer()),
                      ('t2', TfidfVectorizer()),
                      ('cls', ClassifierIntent())])
+
