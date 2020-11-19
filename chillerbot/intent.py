@@ -37,18 +37,17 @@ class Lemmatizer(BaseEstimator, TransformerMixin):
         Returns:
 
         """
-        text = text.split(' ')
-        text_normalize = []
-        for word in text:
-            text_normalize.append(self.morph.parse(word)[0])
+        text = re.sub(r'[^a-z0-9а-я\s]', '', text).split(' ')
         for item in stop_word:
             try:
                 text.remove(item)
             except ValueError:
                 pass
+        text_normalize = []
+        for word in text:
+            text_normalize.append(self.morph.parse(word)[0].normal_form)
 
-        x = ' '.join(text).lower()
-        return re.sub(r'[^a-z0-9а-я\s]', '', x)
+        return ' '.join(text_normalize)
 
 
 class ClassifierIntent(BaseEstimator, ClassifierMixin):
